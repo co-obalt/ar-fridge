@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Fridge</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #f3efe8;
+        font-family: Arial, sans-serif;
+      }
+
+      model-viewer {
+        width: 100vw;
+        height: 100vh;
+        background: #f3efe8;
+      }
+
+      .status {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        max-width: min(320px, calc(100vw - 24px));
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.68);
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      .retry {
+        position: fixed;
+        right: 12px;
+        bottom: 12px;
+        z-index: 10;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 16px;
+        background: #111;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .retry[hidden] {
+        display: none;
+      }
+    </style>
+    <script
+      type="module"
+      src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
+    ></script>
+  </head>
+  <body>
+    <div id="status" class="status">Camera permission mang rahe hain...</div>
+    <button id="retry" class="retry" type="button" hidden>Retry Camera</button>
+
+    <model-viewer
+      id="viewer"
+      src="./not-too-modern_fridge.glb"
+      ios-src="./Not-too-modern_fridge.usdz"
+      alt="Fridge AR model"
+      ar
+      ar-modes="webxr scene-viewer quick-look"
+      ar-scale="fixed"
+      ar-placement="floor"
+      camera-controls
+      touch-action="pan-y"
+      shadow-intensity="1"
+      exposure="1"
+      environment-image="neutral"
+    ></model-viewer>
+
+    <script>
+      const viewer = document.getElementById("viewer");
+      const status = document.getElementById("status");
+      const retry = document.getElementById("retry");
+
+      function setStatus(message, showRetry = false) {
+        status.textContent = message;
+        retry.hidden = !showRetry;
+      }
+
+      async function requestCameraPermission() {
+        if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+          setStatus("Camera permission ke liye localhost ya HTTPS chahiye.", true);
+          return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus("Camera API available nahi hai is browser mein.", false);
+          return;
+        }
+
+        try {
+          setStatus("Camera permission mang rahe hain...");
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false,
+          });
+
+          stream.getTracks().forEach((track) => track.stop());
+          setStatus("Permission mil gayi. Model ko drag, zoom, rotate karke dekho.");
+        } catch (error) {
+          if (error && error.name === "NotAllowedError") {
+            setStatus("Camera permission deny ho gayi. Retry karo.", true);
+            return;
+          }
+
+          setStatus("Camera open nahi ho saki.", true);
+        }
+      }
+
+      viewer.addEventListener("load", () => {
+        if (!status.textContent.includes("Permission mil gayi")) {
+          setStatus("Model ready hai. Camera permission ka wait ho raha hai.");
+        }
+      });
+
+      viewer.addEventListener("error", () => {
+        setStatus("Model load nahi hua.", false);
+      });
+
+      retry.addEventListener("click", requestCameraPermission);
+      window.addEventListener("load", requestCameraPermission, { once: true });
+    </script>
+  </body>
+</html>
