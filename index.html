@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AR Fridge</title>
     <style>
       * {
@@ -15,46 +15,83 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #f3efe8;
+        background: #000;
+        color: #fff;
         font-family: Arial, sans-serif;
       }
 
+      body {
+        display: grid;
+        place-items: center;
+      }
+
       model-viewer {
-        width: 100vw;
-        height: 100vh;
-        background: #f3efe8;
+        position: fixed;
+        inset: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        pointer-events: none;
       }
 
-      .status {
-        position: fixed;
-        top: 12px;
-        left: 12px;
-        z-index: 10;
-        max-width: min(320px, calc(100vw - 24px));
-        padding: 10px 14px;
-        border-radius: 999px;
-        background: rgba(0, 0, 0, 0.68);
-        color: #fff;
-        font-size: 14px;
-        line-height: 1.4;
+      .screen {
+        width: 100%;
+        min-height: 100%;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 32%),
+          linear-gradient(180deg, #181818 0%, #050505 100%);
       }
 
-      .retry {
-        position: fixed;
-        right: 12px;
-        bottom: 12px;
-        z-index: 10;
+      .panel {
+        width: min(100%, 420px);
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 34px;
+        line-height: 1.05;
+      }
+
+      p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.82);
+        line-height: 1.5;
+      }
+
+      .actions {
+        margin-top: 22px;
+        display: grid;
+        gap: 12px;
+      }
+
+      button {
+        width: 100%;
+        min-height: 56px;
         border: 0;
         border-radius: 999px;
-        padding: 12px 16px;
-        background: #111;
-        color: #fff;
-        font-size: 14px;
+        padding: 14px 20px;
+        background: #ffffff;
+        color: #111111;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 700;
         cursor: pointer;
       }
 
-      .retry[hidden] {
-        display: none;
+      .secondary {
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+      }
+
+      .status {
+        margin-top: 14px;
+        min-height: 22px;
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.9);
       }
     </style>
     <script
@@ -63,9 +100,6 @@
     ></script>
   </head>
   <body>
-    <div id="status" class="status">Camera permission mang rahe hain...</div>
-    <button id="retry" class="retry" type="button" hidden>Retry Camera</button>
-
     <model-viewer
       id="viewer"
       src="./not-too-modern_fridge.glb"
@@ -75,65 +109,86 @@
       ar-modes="webxr scene-viewer quick-look"
       ar-scale="fixed"
       ar-placement="floor"
-      camera-controls
-      touch-action="pan-y"
-      shadow-intensity="1"
-      exposure="1"
       environment-image="neutral"
+      reveal="auto"
     ></model-viewer>
+
+    <main class="screen">
+      <section class="panel">
+        <h1>View Fridge In Your Space</h1>
+        <p>
+          Mobile par tap karo aur fridge apne real environment mein camera ke through dekho.
+        </p>
+
+        <div class="actions">
+          <button id="launchAr" type="button">Open AR Camera View</button>
+          <button id="retry" class="secondary" type="button" hidden>Try Again</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </section>
+    </main>
 
     <script>
       const viewer = document.getElementById("viewer");
-      const status = document.getElementById("status");
+      const launchAr = document.getElementById("launchAr");
       const retry = document.getElementById("retry");
+      const status = document.getElementById("status");
 
-      function setStatus(message, showRetry = false) {
+      function setStatus(message, canRetry = false) {
         status.textContent = message;
-        retry.hidden = !showRetry;
+        retry.hidden = !canRetry;
       }
 
-      async function requestCameraPermission() {
-        if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-          setStatus("Camera permission ke liye localhost ya HTTPS chahiye.", true);
+      function isMobileDevice() {
+        return /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+      }
+
+      async function openAR() {
+        if (typeof viewer.activateAR !== "function") {
+          setStatus("Is browser mein AR launch support available nahi hai.", true);
           return;
         }
 
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setStatus("Camera API available nahi hai is browser mein.", false);
-          return;
-        }
+        launchAr.disabled = true;
+        setStatus("AR launch ho raha hai...");
 
         try {
-          setStatus("Camera permission mang rahe hain...");
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" } },
-            audio: false,
-          });
-
-          stream.getTracks().forEach((track) => track.stop());
-          setStatus("Permission mil gayi. Model ko drag, zoom, rotate karke dekho.");
+          await viewer.activateAR();
+          setStatus("Agar AR open na ho to dobara tap karo.", true);
         } catch (error) {
-          if (error && error.name === "NotAllowedError") {
-            setStatus("Camera permission deny ho gayi. Retry karo.", true);
-            return;
-          }
-
-          setStatus("Camera open nahi ho saki.", true);
+          setStatus("AR open nahi hua. Mobile Chrome ya Safari par try karo.", true);
+        } finally {
+          launchAr.disabled = false;
         }
       }
 
       viewer.addEventListener("load", () => {
-        if (!status.textContent.includes("Permission mil gayi")) {
-          setStatus("Model ready hai. Camera permission ka wait ho raha hai.");
+        if (!isMobileDevice()) {
+          setStatus("Desktop par real AR nahi chalega. Is link ko mobile par kholo.", false);
+          return;
         }
+
+        if (!viewer.canActivateAR) {
+          setStatus("Device/browser AR support detect nahi hua. Mobile Chrome ya Safari use karo.", true);
+          return;
+        }
+
+        setStatus("Ready. Tap karke camera AR khol do.");
       });
 
       viewer.addEventListener("error", () => {
-        setStatus("Model load nahi hua.", false);
+        setStatus("Model load nahi hua.", true);
       });
 
-      retry.addEventListener("click", requestCameraPermission);
-      window.addEventListener("load", requestCameraPermission, { once: true });
+      viewer.addEventListener("ar-status", (event) => {
+        if (event.detail.status === "failed") {
+          setStatus("AR session fail ho gayi. Dobara try karo.", true);
+        }
+      });
+
+      launchAr.addEventListener("click", openAR);
+      retry.addEventListener("click", openAR);
     </script>
   </body>
 </html>
