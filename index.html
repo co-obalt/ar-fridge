@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>AR Fridge</title>
+    <title>AR Product View</title>
     <style>
       * {
         box-sizing: border-box;
@@ -103,10 +103,9 @@
     <model-viewer
       id="viewer"
       src="./not-too-modern_fridge.glb"
-      ios-src="./Not-too-modern_fridge.usdz"
       alt="Fridge AR model"
       ar
-      ar-modes="webxr scene-viewer quick-look"
+      ar-modes="scene-viewer webxr quick-look"
       ar-scale="fixed"
       ar-placement="floor"
       environment-image="neutral"
@@ -115,13 +114,11 @@
 
     <main class="screen">
       <section class="panel">
-        <h1>View Fridge In Your Space</h1>
-        <p>
-          Mobile par tap karo aur fridge apne real environment mein camera ke through dekho.
-        </p>
+        <h1>AR Product View</h1>
+        <p>Open the product in your environment.</p>
 
         <div class="actions">
-          <button id="launchAr" type="button">Open AR Camera View</button>
+          <button id="launchAr" type="button">Open in AR</button>
           <button id="retry" class="secondary" type="button" hidden>Try Again</button>
         </div>
 
@@ -146,18 +143,18 @@
 
       async function openAR() {
         if (typeof viewer.activateAR !== "function") {
-          setStatus("Is browser mein AR launch support available nahi hai.", true);
+          setStatus("AR launch is not available in this browser.", true);
           return;
         }
 
         launchAr.disabled = true;
-        setStatus("AR launch ho raha hai...");
+        setStatus("Launching AR...");
 
         try {
           await viewer.activateAR();
-          setStatus("Agar AR open na ho to dobara tap karo.", true);
+          setStatus("If the session closes, try again.", true);
         } catch (error) {
-          setStatus("AR open nahi hua. Mobile Chrome ya Safari par try karo.", true);
+          setStatus("AR did not open. Use mobile Chrome or Safari.", true);
         } finally {
           launchAr.disabled = false;
         }
@@ -165,25 +162,25 @@
 
       viewer.addEventListener("load", () => {
         if (!isMobileDevice()) {
-          setStatus("Desktop par real AR nahi chalega. Is link ko mobile par kholo.", false);
+          setStatus("Open this page on a supported mobile device.", false);
           return;
         }
 
         if (!viewer.canActivateAR) {
-          setStatus("Device/browser AR support detect nahi hua. Mobile Chrome ya Safari use karo.", true);
+          setStatus("AR is not available on this device or browser.", true);
           return;
         }
 
-        setStatus("Ready. Tap karke camera AR khol do.");
+        setStatus("Ready.");
       });
 
       viewer.addEventListener("error", () => {
-        setStatus("Model load nahi hua.", true);
+        setStatus("The model failed to load.", true);
       });
 
       viewer.addEventListener("ar-status", (event) => {
         if (event.detail.status === "failed") {
-          setStatus("AR session fail ho gayi. Dobara try karo.", true);
+          setStatus("The AR session failed.", true);
         }
       });
 
