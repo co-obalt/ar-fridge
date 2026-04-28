@@ -131,6 +131,13 @@
       const launchAr = document.getElementById("launchAr");
       const retry = document.getElementById("retry");
       const status = document.getElementById("status");
+      const isIOS =
+        /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        viewer.setAttribute("ar-modes", "quick-look");
+      }
 
       function setStatus(message, canRetry = false) {
         status.textContent = message;
